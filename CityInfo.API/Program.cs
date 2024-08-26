@@ -1,6 +1,21 @@
+using CityInfo.API;
+using CityInfo.API.Services;
 using Microsoft.AspNetCore.StaticFiles;
+using Serilog;
+
+// configuring serilog
+Log.Logger = new LoggerConfiguration()
+	.MinimumLevel.Debug()
+	.WriteTo.Console()
+	.WriteTo.File("logs/cityinfo.txt", rollingInterval: RollingInterval.Day)
+	.CreateLogger();
+
 
 var builder = WebApplication.CreateBuilder(args);
+//builder.Logging.ClearProviders(); // removes the logger provided by default
+//builder.Logging.AddConsole();
+builder.Host.UseSerilog(); // using serilog for logging...
+
 
 // Add services to the container.
 
@@ -9,13 +24,23 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(options =>
 {
 	options.ReturnHttpNotAcceptable = true; // reject xml format requests, because we are not formatting for it. returns 406 code.
-}).AddXmlDataContractSerializerFormatters(); // add the ability to respond with xml
+}).AddNewtonsoftJson().
+AddXmlDataContractSerializerFormatters(); // add the ability to respond with xml
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>(); // to determine extensions of static files...
+
+#if DEBUG
+builder.Services.AddTransient<IMailService, LocalMailService>();
+#else
+builder.Services.AddTransient<IMailService, CloudMailService>();
+#endif
+builder.Services.AddSingleton<CitiesDataStore>();
+
+builder.Services.AddProblemDetails();
 
 //// adding problem details for error information
 //builder.Services.AddProblemDetails(options =>
@@ -28,6 +53,11 @@ builder.Services.AddSingleton<FileExtensionContentTypeProvider>(); // to determi
 //});
 
 var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+	app.UseExceptionHandler();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

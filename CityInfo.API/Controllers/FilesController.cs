@@ -36,5 +36,27 @@ namespace CityInfo.API.Controllers
 			var bytes = System.IO.File.ReadAllBytes(path);
 			return File(bytes, contentType, Path.GetFileName(path));
 		}
+		[HttpPost]
+		public async Task<ActionResult> CreateFile(IFormFile file)
+		{
+			// validating input file. Limit size of uploads.
+			// for demo purposes, he's only allowing pdf files to be uploaded.
+			// also in real-world scenario, store uploaded files to a seperate dir, that does not have execute capability.
+			if (file.Length == 0 || file.Length > 20971520 || file.ContentType != "application/pdf")
+			{
+				return BadRequest("Invalid File");
+			}
+
+			var path = Path.Combine(
+				Directory.GetCurrentDirectory(),
+				$"uploaded_file_{Guid.NewGuid()}.pdf");
+
+			using (var stream = new FileStream(path, FileMode.Create))
+			{
+				await file.CopyToAsync(stream);
+			}
+
+			return Ok("File uploaded");
+		}
 	}
 }
