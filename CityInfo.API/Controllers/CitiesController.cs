@@ -11,17 +11,31 @@ namespace CityInfo.API.Controllers
 	{
 		private readonly ICityInfoRepository _cityInfoRepository;
 		private readonly IMapper _mapper;
+		const int MAX_CITIES_PAGE_SIZE = 20;
 
-		public CitiesController(ICityInfoRepository cityInfoRepository, IMapper mapper)
+		public CitiesController(
+			ICityInfoRepository cityInfoRepository,
+			IMapper mapper
+			)
 		{
 			_cityInfoRepository = cityInfoRepository ?? throw new ArgumentNullException(nameof(cityInfoRepository));
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 		}
 
 		[HttpGet]
-		public async Task<ActionResult<IEnumerable<CityWithoutPointsOfInterestDto>>> GetCities()
+		public async Task<ActionResult<IEnumerable<CityWithoutPointsOfInterestDto>>> GetCities(
+			[FromQuery] string? name,
+			[FromQuery] string? searchQuery,
+			[FromQuery] int pageNumber = 1,
+			[FromQuery] int pageSize = 10
+			)
 		{
-			var cities = await _cityInfoRepository.GetCitiesAsync();
+			if (pageSize > MAX_CITIES_PAGE_SIZE)
+			{
+				pageSize = MAX_CITIES_PAGE_SIZE;
+			}
+
+			var cities = await _cityInfoRepository.GetCitiesAsync(name, searchQuery, pageNumber, pageSize);
 
 			if (cities == null || cities.Count() == 0)
 			{
@@ -48,10 +62,11 @@ namespace CityInfo.API.Controllers
 		}
 
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetCity(int id, bool includePointsOfInterest = false)
+		public async Task<IActionResult> GetCity(
+			int id,
+			bool includePointsOfInterest = false
+			)
 		{
-			//var cityDto = _citiesDataStore.Cities.FirstOrDefault(c => c.Id == id);
-
 			var cityEntity = await _cityInfoRepository.GetCityAsync(id, includePointsOfInterest);
 
 			if (cityEntity == null)

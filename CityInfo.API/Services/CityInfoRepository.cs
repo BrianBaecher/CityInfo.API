@@ -1,5 +1,6 @@
 ﻿using CityInfo.API.DbContexts;
 using CityInfo.API.Entities;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CityInfo.API.Services
@@ -18,6 +19,41 @@ namespace CityInfo.API.Services
 		public async Task<IEnumerable<City>> GetCitiesAsync()
 		{
 			return await _cityInfoContext.Cities.OrderBy(c => c.Name).ToListAsync();
+		}
+
+		public async Task<IEnumerable<City>> GetCitiesAsync(
+			[FromQuery] string? name,
+			[FromQuery] string? searchQuery,
+			[FromQuery] int pageNumber,
+			[FromQuery] int pageSize
+			)
+		{
+			// handle searching or filtering, or both. depending on whether strings are present...
+			// cast DbSet of Cities to a queryable 
+			var collection = _cityInfoContext.Cities as IQueryable<City>;
+
+			// check filter first (name is a filter...)
+			if (!string.IsNullOrWhiteSpace(name))
+			{
+				name = name.Trim();
+				collection = collection.Where(c => c.Name == name);
+			}
+
+			if (!string.IsNullOrWhiteSpace(searchQuery))
+			{
+				searchQuery = searchQuery.Trim();
+				collection = collection.Where(c => c.Name.ToLower().Contains(searchQuery.ToLower())
+				|| c.Description != null && c.Description.ToLower().Contains(searchQuery.ToLower())
+				);
+			}
+
+			// calling ToListAsync marks the end of the deferred execution of query, so this is when the database actually receives an SQL statement.
+			// calling Skip() applies the pagination, important to do this last, as you don't want to skip over the potentially matching entries...
+			return await collection
+				.OrderBy(c => c.Name)
+				.Skip(pageSize * (pageNumber - 1))
+				.Take(pageSize)
+				.ToListAsync();
 		}
 
 
