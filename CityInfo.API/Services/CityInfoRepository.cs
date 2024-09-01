@@ -21,7 +21,7 @@ namespace CityInfo.API.Services
 			return await _cityInfoContext.Cities.OrderBy(c => c.Name).ToListAsync();
 		}
 
-		public async Task<IEnumerable<City>> GetCitiesAsync(
+		public async Task<(IEnumerable<City>, PaginationMetadata)> GetCitiesAsync(
 			[FromQuery] string? name,
 			[FromQuery] string? searchQuery,
 			[FromQuery] int pageNumber,
@@ -47,13 +47,23 @@ namespace CityInfo.API.Services
 				);
 			}
 
+			var totalItemCount = await collection.CountAsync();
+
+			var paginationMetadata = new PaginationMetadata(
+				totalItemCount,
+				pageSize,
+				pageNumber
+				);
+
 			// calling ToListAsync marks the end of the deferred execution of query, so this is when the database actually receives an SQL statement.
 			// calling Skip() applies the pagination, important to do this last, as you don't want to skip over the potentially matching entries...
-			return await collection
+			var collectionToReturn = await collection
 				.OrderBy(c => c.Name)
 				.Skip(pageSize * (pageNumber - 1))
 				.Take(pageSize)
 				.ToListAsync();
+
+			return (collectionToReturn, paginationMetadata);
 		}
 
 

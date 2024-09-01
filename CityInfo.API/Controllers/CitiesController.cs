@@ -1,12 +1,18 @@
-﻿using AutoMapper;
+﻿using Asp.Versioning;
+using AutoMapper;
 using CityInfo.API.Models;
 using CityInfo.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace CityInfo.API.Controllers
 {
 	[ApiController]
-	[Route("api/cities")]
+	[Authorize]
+	[Route("api/v{version:apiVersion}/cities")]
+	[ApiVersion(1)]
+	[ApiVersion(2)]
 	public class CitiesController : ControllerBase
 	{
 		private readonly ICityInfoRepository _cityInfoRepository;
@@ -35,33 +41,27 @@ namespace CityInfo.API.Controllers
 				pageSize = MAX_CITIES_PAGE_SIZE;
 			}
 
-			var cities = await _cityInfoRepository.GetCitiesAsync(name, searchQuery, pageNumber, pageSize);
+			var (cityEntities, paginationMetadata) = await _cityInfoRepository.GetCitiesAsync(name, searchQuery, pageNumber, pageSize);
 
-			if (cities == null || cities.Count() == 0)
-			{
-				return NotFound();
-			}
+			Response.Headers.Append("X-Pagination",
+				JsonSerializer.Serialize(paginationMetadata));
 
-			// WITHOUT AUTOMAPPER
-			//var result = new List<CityWithoutPointsOfInterestDto>();
-
-			//foreach (var cityEntity in cities)
-			//{
-			//	var dto = new CityWithoutPointsOfInterestDto
-			//	{
-			//		Id = cityEntity.Id,
-			//		Name = cityEntity.Name,
-			//		Description = cityEntity.Description,
-			//	};
-			//	result.Add(dto);
-			//}
-
-			// WITH AUTOMAPPER
-			return Ok(_mapper.Map<IEnumerable<CityWithoutPointsOfInterestDto>>(cities)); // type coming from DB are Entities.City, but to use them we want the type specified in the method definition...
+			return Ok(_mapper.Map<IEnumerable<CityWithoutPointsOfInterestDto>>(cityEntities)); // type coming from DB are Entities.City, but to use them we want the type specified in the method definition...
 
 		}
 
+		/// <summary>
+		/// Get a city by id
+		/// </summary>
+		/// <param name="id">The id of the city to get</param>
+		/// <param name="includePointsOfInterest">whether or not to include the city's points of interest</param>
+		/// <returns>a city, with or without a list of its points of interest</returns>
+		/// <response code = "200">Returns the requested city</response>
+		/// <response code = "404">City with provided id does not exist in database</response>
 		[HttpGet("{id}")]
+		[ProducesResponseType(StatusCodes.Status200OK)]
+		[ProducesResponseType(StatusCodes.Status404NotFound)]
+		[ProducesResponseType(StatusCodes.Status400BadRequest)]
 		public async Task<IActionResult> GetCity(
 			int id,
 			bool includePointsOfInterest = false

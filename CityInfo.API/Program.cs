@@ -1,9 +1,13 @@
+using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
 using CityInfo.API;
 using CityInfo.API.DbContexts;
 using CityInfo.API.Services;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.Reflection;
 
 // configuring serilog
 Log.Logger = new LoggerConfiguration()
@@ -31,7 +35,7 @@ AddXmlDataContractSerializerFormatters(); // add the ability to respond with xml
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
 
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>(); // to determine extensions of static files...
 
@@ -53,6 +57,21 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 builder.Services.AddProblemDetails();
 
+builder.Services.AddAuthentication("Bearer").AddJwtBearer(options =>
+{
+	options.TokenValidationParameters = new()
+	{
+		ValidateIssuer = true,
+		ValidateAudience = true,
+		ValidateIssuerSigningKey = true,
+		ValidIssuer = builder.Configuration["Authentication:Issuer"],
+		ValidAudience = builder.Configuration["Authentication:Audience"],
+		IssuerSigningKey = new SymmetricSecurityKey(
+			Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"]))
+	};
+});
+
+
 //// adding problem details for error information
 //builder.Services.AddProblemDetails(options =>
 //{
@@ -62,6 +81,72 @@ builder.Services.AddProblemDetails();
 //		ctx.ProblemDetails.Extensions.Add("server", Environment.MachineName);
 //	};
 //});
+
+// policy example
+builder.Services.AddAuthorization(authOptions =>
+{
+	authOptions.AddPolicy("MustBeFromCity", policy =>
+	{
+		policy.RequireAuthenticatedUser();
+		policy.RequireClaim("city", "City");
+	});
+});
+
+builder.Services.AddApiVersioning(setupAction =>
+{
+	setupAction.ReportApiVersions = true;
+	setupAction.AssumeDefaultVersionWhenUnspecified = true;
+	setupAction.DefaultApiVersion = new ApiVersion(1, 0);
+}).
+AddMvc()
+.AddApiExplorer(setupAction =>
+{
+	setupAction.SubstituteApiVersionInUrl = true;
+});
+
+var apiVersionDescriptionProvider = builder.Services.BuildServiceProvider().GetRequiredService<IApiVersionDescriptionProvider>();
+
+
+builder.Services.AddSwaggerGen(setupAction =>
+{
+	foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+	{
+		setupAction.SwaggerDoc(
+			$"{description.GroupName}",
+			new()
+			{
+				Title = "City Info API",
+				Version = description.ApiVersion.ToString(),
+				Description = "City api demo..."
+			});
+	}
+
+	var xmlCommentsFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+	var xmlCommentsFullPath = Path.Combine(AppContext.BaseDirectory, xmlCommentsFile);
+
+	setupAction.IncludeXmlComments(xmlCommentsFullPath);
+	setupAction.AddSecurityDefinition("CityInfoBearerAuth", new()
+	{
+		Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+		Scheme = "Bearer",
+		Description = "Input valid token to access the API"
+	});
+
+	setupAction.AddSecurityRequirement(new()
+	{
+		{
+			new()
+		{
+			Reference=new Microsoft.OpenApi.Models.OpenApiReference
+			{
+				Type=Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+				Id="CityInfoApiBearerAuth"
+			}
+		},
+			new List<string>()
+		}
+	});
+});
 
 var app = builder.Build();
 
@@ -74,12 +159,23 @@ if (!app.Environment.IsDevelopment())
 if (app.Environment.IsDevelopment())
 {
 	app.UseSwagger();
-	app.UseSwaggerUI();
+	app.UseSwaggerUI(setupAction =>
+	{
+		var descriptions = app.DescribeApiVersions();
+		foreach (var desc in descriptions)
+		{
+			setupAction.SwaggerEndpoint(
+				$"/swagger/{desc.GroupName}/swagger.json",
+				desc.GroupName.ToUpperInvariant());
+		}
+	});
 }
 
 app.UseHttpsRedirection();
 
 app.UseRouting();
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 

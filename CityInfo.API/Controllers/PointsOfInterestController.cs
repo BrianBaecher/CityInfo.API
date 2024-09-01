@@ -1,13 +1,17 @@
-﻿using AutoMapper;
+﻿using Asp.Versioning;
+using AutoMapper;
 using CityInfo.API.Models;
 using CityInfo.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CityInfo.API.Controllers
 {
-	[Route("api/cities/{cityId}/pointsofinterest")]
+	[Route("api/v{version:apiVersion}/cities/{cityId}/pointsofinterest")]
+	[Authorize(Policy = "MustBeFromCity")]
 	[ApiController]
+	[ApiVersion(2)]
 	public class PointsOfInterestController : ControllerBase
 	{
 		private readonly ILogger<PointsOfInterestController> _logger;

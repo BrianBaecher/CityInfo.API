@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 
 namespace CityInfo.API.Controllers
 {
-	[Route("api/files")]
+	[Route("api/v{version:apiVersion}/files")]
+	[Authorize]
 	[ApiController]
 	public class FilesController : ControllerBase
 	{
@@ -16,6 +19,7 @@ namespace CityInfo.API.Controllers
 		}
 
 		[HttpGet("{fileId}")]
+		[ApiVersion(0.1, Deprecated = true)]
 		public ActionResult GetFile(string fileId)
 		{
 			// in reality, you wouldn't hardcode the file you're getting
