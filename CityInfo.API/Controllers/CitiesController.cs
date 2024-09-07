@@ -51,23 +51,23 @@ namespace CityInfo.API.Controllers
 		}
 
 		/// <summary>
-		/// Get a city by id
+		/// Get a city by cityId
 		/// </summary>
-		/// <param name="id">The id of the city to get</param>
+		/// <param name="cityId">The cityId of the city to get</param>
 		/// <param name="includePointsOfInterest">whether or not to include the city's points of interest</param>
 		/// <returns>a city, with or without a list of its points of interest</returns>
 		/// <response code = "200">Returns the requested city</response>
-		/// <response code = "404">City with provided id does not exist in database</response>
-		[HttpGet("{id}")]
+		/// <response code = "404">City with provided cityId does not exist in database</response>
+		[HttpGet("{cityId}")]
 		[ProducesResponseType(StatusCodes.Status200OK)]
 		[ProducesResponseType(StatusCodes.Status404NotFound)]
 		[ProducesResponseType(StatusCodes.Status400BadRequest)]
 		public async Task<IActionResult> GetCity(
-			int id,
+			int cityId,
 			bool includePointsOfInterest = false
 			)
 		{
-			var cityEntity = await _cityInfoRepository.GetCityAsync(id, includePointsOfInterest);
+			var cityEntity = await _cityInfoRepository.GetCityAsync(cityId, includePointsOfInterest);
 
 			if (cityEntity == null)
 			{

@@ -1,0 +1,38 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+@schema=https
+@hostname=localhost
+@port=7109
+
+GET {{schema}}://{{hostname}}:{{port}}/api/v2/cities
+
+###
+GET {{schema}}://{{hostname}}:{{port}}/api/v2/cities
+Accept:application/xml
+
+###
+POST {{schema}}://{{hostname}}:{{port}}/api/v2/cities/1/pointsofinterest
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "testing name",
+  "description": "testing description"
+}
+
+###
+
+// get a token
+
+POST {{schema}}://{{hostname}}:{{port}}/api/authentication/authenticate
+Content-Type: application/json
+
+{
+  "username": "Brian",
+  "password": "mypassword"
+}
+
+###
+
+// authenticated get request
+GET {{schema}}://{{hostname}}:{{port}}/api/v2/cities
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZ2l2ZW5fbmFtZSI6Ik5hbWUiLCJmYW1pbHlfbmFtZSI6Ikxhc3ROYW1lIiwiY2l0eSI6IkNpdHkiLCJuYmYiOjE3MjU3NDI4MTgsImV4cCI6MTcyNTc0NjQxOCwiaXNzIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6NzEwOSIsImF1ZCI6ImNpdHlpbmZvYXBpIn0.sdQAqdTcXNRL83t3Km9Oqqv5eZLNPsTQAGf_i8SKHA0

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 
+
 namespace CityInfo.API.Controllers
 {
 	[Route("api/v{version:apiVersion}/cities/{cityId}/pointsofinterest")]

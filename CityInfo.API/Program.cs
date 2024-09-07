@@ -148,14 +148,22 @@ builder.Services.AddSwaggerGen(setupAction =>
 	});
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+	options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+});
+
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
 	app.UseExceptionHandler();
 }
 
-// Configure the HTTP request pipeline.
+// forwarding headers should come before anything else...
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
 	app.UseSwagger();
